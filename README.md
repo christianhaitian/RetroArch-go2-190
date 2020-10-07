@@ -2,6 +2,17 @@
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/8936/badge.svg)](https://scan.coverity.com/projects/retroarch)
 [![Crowdin](https://badges.crowdin.net/retroarch/localized.svg)](https://crowdin.com/project/retroarch)
 
+Retroarch for RK3326 devices
+
+# To build  
+
+Make sure all dependencies are installed per this [link](https://emulation.gametechwiki.com/index.php/Building_RetroArch#Building_on_Linux) then do:
+
+`git clone https://github.com/christianhaitian/RetroArch-go2-190.git` \
+`cd RetroArch-go2-190` \
+`./configure --enable-alsa --enable-udev --enable-kms --disable-opengl1 --disable-opengl --enable-egl --enable-opengles --enable-opengles3 --disable-wayland --disable-x11` \
+`make` (You can probably do a make -j2 or make -j3 to speed upt he make process if you have the resources to do so.)
+
 # RetroArch
 
 RetroArch is the reference frontend for the libretro API.
