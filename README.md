@@ -11,7 +11,7 @@ Make sure all dependencies are installed per this [link](https://emulation.gamet
 `git clone https://github.com/christianhaitian/RetroArch-go2-190.git` \
 `cd RetroArch-go2-190` \
 `./configure --enable-alsa --enable-udev --enable-kms --disable-opengl1 --disable-opengl --enable-egl --enable-opengles --enable-opengles3 --disable-wayland --disable-x11 --enable-odroidgo2` \
-`make` (You can probably do a make -j2 or make -j3 to speed upt he make process if you have the resources to do so.)
+`make` (You can probably do a make -j2 or make -j3 to speed up the make process if you have the resources to do so.)
 
 # RetroArch
 
