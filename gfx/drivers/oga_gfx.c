@@ -30,6 +30,7 @@
 #include "frontend/frontend_driver.h"
 
 #include "../font_driver.h"
+#include "libretro.h"
 
 #ifdef HAVE_CONFIG_H
 #include "../../config.h"
@@ -45,9 +46,9 @@
 #define likely(x)   __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
-#define NATIVE_WIDTH 480
-#define NATIVE_HEIGHT 320
-#define NATIVE_ASPECT_RATIO 1.5
+						
+						 
+							   
 
 #define ALIGN(val, align) (((val) + (align) - 1) & ~((align) - 1))
 
@@ -85,6 +86,9 @@ typedef struct oga_video
    int fd;
    uint32_t connector_id;
    drmModeModeInfo mode;
+   int drm_width;
+   int drm_height;
+   float display_ar;
    uint32_t crtc_id;
 
    oga_surface_t* frame_surface;
@@ -104,7 +108,7 @@ typedef struct oga_video
    char last_msg[128];
 } oga_video_t;
 
-bool oga_create_display(oga_video_t* vid)
+static bool oga_create_display(oga_video_t* vid)
 {
    int i, ret;
    drmModeConnector *connector;
@@ -202,7 +206,7 @@ err_01:
    return false;
 }
 
-oga_surface_t* oga_create_surface(int display_fd,
+static oga_surface_t* oga_create_surface(int display_fd,
       int width, int height, int rk_format)
 {
    struct drm_mode_create_dumb args = {0};
@@ -252,7 +256,7 @@ out:
    return NULL;
 }
 
-void oga_destroy_surface(oga_surface_t* surface)
+static void oga_destroy_surface(oga_surface_t* surface)
 {
    int io;
    struct drm_mode_destroy_dumb args = { 0 };
@@ -267,7 +271,7 @@ void oga_destroy_surface(oga_surface_t* surface)
    free(surface);
 }
 
-oga_framebuf_t* oga_create_framebuf(oga_surface_t* surface)
+static oga_framebuf_t* oga_create_framebuf(oga_surface_t* surface)
 {
    int ret;
    const uint32_t handles[4] = {surface->handle, 0, 0, 0};
@@ -304,7 +308,7 @@ oga_framebuf_t* oga_create_framebuf(oga_surface_t* surface)
    return framebuf;
 }
 
-void oga_destroy_framebuf(oga_framebuf_t* framebuf)
+static void oga_destroy_framebuf(oga_framebuf_t* framebuf)
 {
    if (drmModeRmFB(framebuf->surface->display_fd, framebuf->fb_id) != 0)
       RARCH_ERR("drmModeRmFB failed.\n");
@@ -379,6 +383,10 @@ static void *oga_gfx_init(const video_info_t *video,
       return NULL;
    }
 
+   vid->display_ar = (float)vid->mode.vdisplay / vid->mode.hdisplay;
+   vid->drm_width = vid->mode.vdisplay;
+   vid->drm_height = vid->mode.hdisplay;
+
    RARCH_LOG("oga_gfx_init video %dx%d rgb32 %d smooth %d ctx_scaling %d"
          " input_scale %u force_aspect %d fullscreen %d threaded %d base_width %d base_height %d"
          " max_width %d max_height %d aw %d ah %d\n",
@@ -386,7 +394,7 @@ static void *oga_gfx_init(const video_info_t *video,
          video->input_scale, video->force_aspect, video->fullscreen, video->is_threaded, geom->base_width, geom->base_height,
          geom->max_width, geom->max_height, aw, ah);
 
-   vid->menu_surface = oga_create_surface(vid->fd, NATIVE_WIDTH, NATIVE_HEIGHT, RK_FORMAT_BGRA_8888);
+   vid->menu_surface = oga_create_surface(vid->fd, vid->drm_width, vid->drm_height, RK_FORMAT_BGRA_8888);
    vid->threaded = video->is_threaded;
 
    /*
@@ -401,7 +409,7 @@ static void *oga_gfx_init(const video_info_t *video,
    vid->rotation = 0;
 
    vid->frame_surface = oga_create_surface(vid->fd, geom->max_width, geom->max_height, video->rgb32 ? RK_FORMAT_BGRA_8888 : RK_FORMAT_RGB_565);
-   vid->msg_surface   = oga_create_surface(vid->fd, NATIVE_WIDTH, NATIVE_HEIGHT, RK_FORMAT_BGRA_8888);
+   vid->msg_surface   = oga_create_surface(vid->fd, vid->drm_width, vid->drm_height, RK_FORMAT_BGRA_8888);
    vid->last_msg[0]   = 0;
 
    /* bitmap only for now */
@@ -413,7 +421,7 @@ static void *oga_gfx_init(const video_info_t *video,
 
    for (i = 0; i < NUM_PAGES; ++i)
    {
-      oga_surface_t* surface = oga_create_surface(vid->fd, NATIVE_HEIGHT, NATIVE_WIDTH, RK_FORMAT_BGRA_8888);
+      oga_surface_t* surface = oga_create_surface(vid->fd, vid->drm_height, vid->drm_width, RK_FORMAT_BGRA_8888);
       vid->pages[i] = oga_create_framebuf(surface);
       if (!vid->pages[i])
          return NULL;
@@ -439,19 +447,19 @@ static void rga_clear_surface(oga_surface_t* surface, int color)
    c_RkRgaColorFill(&dst);
 }
 
-int get_message_width(oga_video_t* vid, const char* msg)
-{
-   int width = 0;
-   for (const char* c = msg; *c; c++)
-   {
-      const struct font_glyph* glyph = vid->font_driver->get_glyph(vid->font, *c);
-      if (unlikely(!glyph))
-         continue;
+														
+ 
+				 
+									 
+	
+																				  
+						   
+				  
 
-      width += glyph->advance_x;
-   }
-   return width;
-}
+								
+	
+				
+ 
 
 static bool render_msg(oga_video_t* vid, const char* msg)
 {
@@ -486,7 +494,7 @@ static bool render_msg(oga_video_t* vid, const char* msg)
       if (vid->msg_height == 0)
          vid->msg_height = g->height;
 
-      if (dest_x >= NATIVE_WIDTH)
+      if (dest_x >= vid->drm_width)
       {
          dest_x = 0;
          dest_y += g->height;
@@ -519,7 +527,7 @@ static bool render_msg(oga_video_t* vid, const char* msg)
    return true;
 }
 
-void oga_blit(oga_surface_t* src, int sx, int sy, int sw, int sh,
+static void oga_blit(oga_surface_t* src, int sx, int sy, int sw, int sh,
       oga_surface_t* dst, int dx, int dy, int dw, int dh,
       int rotation, int scale_mode, unsigned int blend)
 {
@@ -541,21 +549,21 @@ void oga_blit(oga_surface_t* src, int sx, int sy, int sw, int sh,
    c_RkRgaBlit(&s, &d, NULL);
 }
 
-void oga_calc_bounds(oga_rect_t* r, int width, int height, float aspect)
+static void oga_calc_bounds(oga_rect_t* r, int dw, int dh, int sw, int sh, float aspect, float dar)
 {
-   if (NATIVE_ASPECT_RATIO >= aspect)
+   if (dar >= aspect)
    {
-      r->h = NATIVE_HEIGHT;
-      r->w = MIN(NATIVE_WIDTH, (NATIVE_HEIGHT * aspect + 0.5));
-      r->x = (NATIVE_WIDTH - r->w) / 2 + 0.5;
+      r->h = dh;
+      r->w = MIN(dw, (dh * aspect + 0.5));
+      r->x = (int)((dw - r->w) / 2) + 0.5;
       r->y = 0;
    }
    else
    {
-      r->w = NATIVE_WIDTH;
-      r->h = MIN(NATIVE_HEIGHT, (NATIVE_WIDTH / aspect + 0.5));
+      r->w = dw;
+      r->h = MIN(dh, (dw / aspect + 0.5));
       r->x = 0;
-      r->y = (NATIVE_HEIGHT - r->h) / 2 + 0.5;
+      r->y = (int)((dh - r->h) / 2) + 0.5;
    }
 }
 
@@ -589,20 +597,27 @@ static bool oga_gfx_frame(void *data, const void *frame, unsigned width,
    {
       uint8_t* src = (uint8_t*)frame;
       uint8_t* dst = (uint8_t*)vid->frame_surface->map;
-      int dst_pitch = vid->frame_surface->pitch;
+												
       unsigned int blend = video_info->runloop_is_paused ? 0x800105 : 0;
+      oga_rect_t r;
 
-      int yy = height;
-      while (yy > 0) {
-          memcpy(dst, src, pitch);
-          src += pitch;
-          dst += dst_pitch;
-          --yy;
+      if (src != dst)
+      {
+         int dst_pitch = vid->frame_surface->pitch;
+         int yy = height;
+						   
+			   
+	   
+
+         while (yy > 0) {
+             memcpy(dst, src, pitch);
+             src += pitch;
+             dst += dst_pitch;
+             --yy;
+         }
       }
 
-      oga_rect_t r;
-      oga_calc_bounds(&r, width, height, aspect_ratio);
-
+      oga_calc_bounds(&r, vid->drm_width, vid->drm_height, width, height, aspect_ratio, vid->display_ar);
       oga_blit(vid->frame_surface, 0, 0, width, height,
             page_surface, r.y, r.x, r.h, r.w, vid->rotation, vid->scale_mode, blend);
    }
@@ -617,7 +632,7 @@ static bool oga_gfx_frame(void *data, const void *frame, unsigned width,
       aspect_ratio = (float)width / height;
 
       oga_rect_t r;
-      oga_calc_bounds(&r, width, height, aspect_ratio);
+      oga_calc_bounds(&r, vid->drm_width, vid->drm_height, width, height, aspect_ratio, vid->display_ar);
       oga_blit(vid->menu_surface, 0, 0, width, height,
             page_surface, r.y, r.x, r.h, r.w, HAL_TRANSFORM_ROT_270, vid->scale_mode, 0);
    }
@@ -705,8 +720,8 @@ static void oga_gfx_viewport_info(void *data, struct video_viewport *vp)
       return;
 
    vp->x = vp->y = 0;
-   vp->width = vp->full_width = NATIVE_WIDTH;
-   vp->height = vp->full_height = NATIVE_HEIGHT;
+   vp->width = vp->full_width = vid->mode.vdisplay;
+   vp->height = vp->full_height = vid->mode.hdisplay;
 }
 
 static bool oga_gfx_set_shader(void *data, enum rarch_shader_type type, const char *path)
@@ -718,7 +733,7 @@ static bool oga_gfx_set_shader(void *data, enum rarch_shader_type type, const ch
    return false;
 }
 
-void oga_set_rotation(void *data, unsigned rotation)
+static void oga_set_rotation(void *data, unsigned rotation)
 {
    oga_video_t *vid = (oga_video_t*)data;
    if (!vid)
@@ -744,7 +759,21 @@ void oga_set_rotation(void *data, unsigned rotation)
    }
 }
 
-static const video_poke_interface_t oga_poke_interface = {
+static bool oga_get_current_software_framebuffer(void *data, struct retro_framebuffer *framebuffer)
+{
+   oga_video_t *vid = (oga_video_t*)data;
+   if (!vid)
+      return false;
+
+   framebuffer->format = vid->frame_surface->rk_format == RK_FORMAT_BGRA_8888 ?
+      RETRO_PIXEL_FORMAT_XRGB8888 : RETRO_PIXEL_FORMAT_RGB565;
+   framebuffer->data = (uint8_t*)vid->frame_surface->map;
+   framebuffer->pitch = vid->frame_surface->pitch;
+
+   return true;
+}
+
+video_poke_interface_t oga_poke_interface = {
    NULL,
    NULL,
    NULL,
@@ -764,7 +793,7 @@ static const video_poke_interface_t oga_poke_interface = {
    NULL,
    NULL,
    NULL,
-   NULL,
+   oga_get_current_software_framebuffer,
    NULL
 };
 
