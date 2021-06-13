@@ -15,8 +15,8 @@ Following patch only works with retroarch 1.9.4 or newer \
 `patch -Np1 < add-wifi-menu-to-retroarch.patch` \
 Remove --enable-wifi option from configure if building this particular version of retroarch. \
 `./configure --disable-opengl --disable-opengl1 --disable-qt --disable-wayland --disable-x11 --enable-alsa --enable-egl --enable-kms --enable-odroidgo2 --enable-opengles --enable-opengles3 --enable-udev --disable-vulkan --disable-vulkan_display --enable-networking --enable-ozone --disable-caca --enable-opengles3_1 --enable-opengles3_2 --enable-wifi` \
-`sed -i menu/drivers/ozone/ozone.c -e "s/scale_factor = ozone->last_scale_factor/scale_factor = ozone->last_scale_factor \* 1.5/"`
-`sed -i '/   \"Main Menu\"/c\   \"ArkOS\"' intl/msg_hash_us.h`
+`sed -i menu/drivers/ozone/ozone.c -e "s/scale_factor = ozone->last_scale_factor/scale_factor = ozone->last_scale_factor \* 1.5/"` \
+`sed -i '/   \"Main Menu\"/c\   \"ArkOS\"' intl/msg_hash_us.h` \
 `make` (You can probably do a make -j2 or make -j3 to speed up the make process if you have the resources to do so.)
 
 # RetroArch
