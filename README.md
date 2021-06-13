@@ -23,6 +23,9 @@ Line below improves visibility of the ozone menu \
 Line below changes the Main Menu text to ArkOS \
 `sed -i '/   \"Main Menu\"/c\   \"ArkOS\"' intl/msg_hash_us.h`
 
+or just apply the following patch to add all of this \
+`patch -Np1 < Retroarch-ArkOS.patch`
+
 `make` (You can probably do a make -j2 or make -j3 to speed up the make process if you have the resources to do so.)
 
 # RetroArch
